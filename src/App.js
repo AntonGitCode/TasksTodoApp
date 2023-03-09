@@ -1,46 +1,111 @@
-import React from "react";
-import TodoList from "./Todo/TaskList";
-import Context from "./context";
+import React, { Component } from "react";
+import TaskList from "./Todo/TaskList";
 import NewTaskForm from "./Todo/AddTask";
 import Footer from "./Todo/Footer";
 
-function App() {
-  const [todos, setTodos] = React.useState([
-    { id: 1, completed: "completed", title: "Completed Task" },
-    { id: 2, completed: "editing", title: "Editing Task" },
-    { id: 3, completed: "active", title: "Active Task" },
-  ]);
+export default class App extends Component {
+  counter = 1;
 
-  function removeTodo(id) {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  state = {
+    todos: [
+      this.createTask("Active Task 1"),
+      this.createTask("Zadacha One"),
+      this.createTask("Deadline React Task"),
+    ],
+    statusFilter: "all",
+  };
+
+  createTask(title) {
+    return {
+      title,
+      id: this.counter++,
+      completed: "active",
+    };
   }
 
-  function addTask(title) {
-    setTodos(
-      todos.concat([
-        {
-          title,
-          id: Date.now(),
-          completed: "active",
-        },
-      ])
-    );
-  }
+  addTask = (title) => {
+    this.setState(({ todos }) => {
+      return {
+        todos: todos.concat([this.createTask(title)]),
+      };
+    });
+  };
 
-  return (
-    <Context.Provider value={{ removeTodo }}>
+  deleteTodo = (id) => {
+    this.setState(({ todos }) => {
+      const idx = todos.findIndex((el) => el.id === id);
+      const newArray = [...todos.slice(0, idx), ...todos.slice(idx + 1)];
+      return {
+        todos: newArray,
+      };
+    });
+  };
+
+  onToggleDone = (id) => {
+    this.setState(({ todos }) => {
+      const idx = todos.findIndex((el) => el.id === id);
+      const oldTodo = todos[idx];
+      const newTodo =
+        todos[idx].completed === "active"
+          ? { ...oldTodo, completed: "completed" }
+          : { ...oldTodo, completed: "active" };
+
+      const newArray = [
+        ...todos.slice(0, idx),
+        newTodo,
+        ...todos.slice(idx + 1),
+      ];
+      return { todos: newArray };
+    });
+  };
+
+  makeFiltered = (newStatus) => {
+    this.setState(({ statusFilter }) => {
+      return { statusFilter: newStatus };
+    });
+  };
+
+  clearCompleted = () => {
+    this.setState(({ todos }) => {
+      return {
+        todos: todos.filter((el) => el.completed !== "completed"),
+      };
+    });
+  };
+
+  render() {
+    const { todos, statusFilter } = this.state;
+    const activeTodoCount =
+      todos.length - todos.filter((el) => el.completed === "completed").length;
+
+    return (
       <section className="todoapp">
         <header className="header">
           <h1>todos</h1>
-          <NewTaskForm onCreate={addTask} />
+          <NewTaskForm addTask={this.addTask} />
         </header>
         <section className="main">
-          {todos.length ? <TodoList todos={todos} /> : <p> List is empty</p>}
-          {<Footer todos={todos} />};
+          {todos.length ? (
+            <TaskList
+              todos={todos}
+              onDeleted={this.deleteTodo}
+              onToggleDone={this.onToggleDone}
+              statusFilter={statusFilter}
+            />
+          ) : (
+            <p className="list-is-empty">
+              List is empty. Type above to add task.
+            </p>
+          )}
+          {
+            <Footer
+              activeTodoCount={activeTodoCount}
+              makeFiltered={this.makeFiltered}
+              clearCompleted={this.clearCompleted}
+            />
+          }
         </section>
       </section>
-    </Context.Provider>
-  );
+    );
+  }
 }
-
-export default App;
